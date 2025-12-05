@@ -123,11 +123,20 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local Stats = game:GetService("Stats")
+local HttpService = game:GetService("HttpService")
+local sharedKeyForgeEnv = getgenv and getgenv() or _G
 
+local forcedMobilePreference = rawget(sharedKeyForgeEnv, "__KF_FORCE_MOBILE")
 local mouse = player:GetMouse()
+local viewPortSize = workspace.CurrentCamera.ViewportSize
+local isMobileClient = forcedMobilePreference
+if isMobileClient == nil then
+	local touchOnly = UserInputService.TouchEnabled
+	isMobileClient = touchOnly and not GuiService:IsTenFootInterface()
+end
+
 local LocalPlayer = player
 local Mouse = mouse
-local viewPortSize = workspace.CurrentCamera.ViewportSize
 
 local originalElements = {}
 -- Add Tween Dictonary with format Tweens.ElementType.TweenName to ignore repetitive variables
@@ -2116,13 +2125,30 @@ function Library.new(windowName: string, constrainToScreen: boolean?, width: num
 	windowInstance.Parent = game:GetService("CoreGui") -- Change to core later on and add detection bypass
 	background.Size = UDim2.fromOffset(background.AbsoluteSize.X, background.AbsoluteSize.Y)
 	
-	if width then
-		background.Size = UDim2.fromOffset(width, background.AbsoluteSize.Y)
+	local appliedWidth = width
+	local appliedHeight = height
+	if not appliedWidth then
+		if isMobileClient then
+			appliedWidth = math.clamp(math.floor(viewPortSize.X - 32), 360, 580)
+		else
+			appliedWidth = background.AbsoluteSize.X
+		end
+	end
+	if not appliedHeight then
+		if isMobileClient then
+			appliedHeight = math.clamp(math.floor(viewPortSize.Y - 140), 320, 420)
+		else
+			appliedHeight = background.AbsoluteSize.Y
+		end
 	end
 
-	if height then
-		background.Size = UDim2.fromOffset(background.AbsoluteSize.X, height)
+	local targetWidth = appliedWidth
+	local targetHeight = appliedHeight
+	if isMobileClient then
+		targetWidth = math.clamp(targetWidth, 340, math.max(320, viewPortSize.X - 20))
+		targetHeight = math.clamp(targetHeight, 300, math.max(300, viewPortSize.Y - 20))
 	end
+	background.Size = UDim2.fromOffset(targetWidth, targetHeight)
 
 	holder.PageLogo.Image = backgroundImageId or "rbxassetid://12187365364"
 	background.Position = UDim2.new(0, background.AbsolutePosition.X + background.AbsoluteSize.X / 2, 0, background.AbsolutePosition.Y + background.AbsoluteSize.Y / 2 + 36)
@@ -2135,6 +2161,12 @@ function Library.new(windowName: string, constrainToScreen: boolean?, width: num
 	minimizedLongBarOriginialSize = Vector2.new(heading.AbsoluteSize.X, heading.AbsoluteSize.Y)
 	minimizedShortBarOriginialSize = Vector2.new(heading.AbsoluteSize.X / 6 * 2, heading.AbsoluteSize.Y)
 	originialWindowSize = background.AbsoluteSize
+	
+	if isMobileClient then
+		holder.Tabs.Size = UDim2.new(0.3, 0, 1, -20)
+		holder.Tabs.ScrollBarThickness = 4
+		heading.Title.TextSize = 13
+	end
 	
 	return window
 end
